@@ -3,7 +3,9 @@ import config
 import pathlib
 import preprocess
 import validation
-from sklearn.neighbors import KNeighborsClassifier
+from tqdm import tqdm
+from collections import defaultdict
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 if __name__ == "__main__":
     if not pathlib.Path(config.FEATURE_FILE).exists():
@@ -17,4 +19,22 @@ if __name__ == "__main__":
     classifier.fit(X_train, y_train)
     y_pred = classifier.predict(X_test)
 
+    print("KNN Classifier validation: ")
     validation.calculate_validations(y_test, y_pred)
+
+    regressor = KNeighborsRegressor(metric='cityblock', n_jobs=-1, n_neighbors=3)
+    regressor.fit(X_train, y_train)
+    y_pred = regressor.predict(X_test)
+
+    C = 100
+    threshold = 50
+    violations = 0
+
+    for pred in tqdm(y_pred, unit=" Predictions", desc="Calculating trust score"):
+        if C < threshold: violations += 1
+
+        if pred >= 0.5: C = min(C + pred, 100)
+        elif pred >= 0.3: C = max(C - (1 - pred), 0)
+        else: C = max(C - 1, 0)
+
+    print(f"\nKNN Regressor results (trust score): {C = :3.2f} {violations = }")

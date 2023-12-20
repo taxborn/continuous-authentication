@@ -37,7 +37,7 @@ def binary_classify(subject: int, save: bool = False) -> list:
     y = dataset.iloc[:, 0] # id
 
     # TODO: Configurable train/test size?
-    return train_test_split(X, y, train_size=0.7, random_state=1)
+    return train_test_split(X, y, train_size=0.9, random_state=1)
 
 def preprocess_raw_subject(subject: int) -> pd.DataFrame:
     # TODO: Check if file exists?
@@ -125,11 +125,8 @@ def multiprocess_all_subjects():
     TODO: Is tuple() the only way to evaluate?
     """
     subjects = 15
-    print(f"Processing the feature set for {subjects} subjects.")
-    start = time.time()
     with multiprocessing.Pool(processes=subjects) as pool:
-        tuple(tqdm(pool.imap_unordered(process_subject, range(subjects)), total=subjects))
-    print(f"Took {time.time() - start:3.3f}s")
+        tuple(tqdm(pool.imap_unordered(process_subject, range(subjects)), total=subjects, unit=" subjects", desc="Processing the feature sets"))
 
 def create_feature_file():
     # TODO: What to do if the file exists? overwrite? ask? increment a value in the name?
