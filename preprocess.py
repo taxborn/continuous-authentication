@@ -24,7 +24,7 @@ def binary_classify(subject: int, save: bool = False) -> list:
     genuine_user_data = copy.deepcopy(genuine_user_data.values)
     genuine_user_data[:, 0] = 1
 
-    imposter_user_data = df[df["ID"] != subject].sample(genuine_user_data.shape[0])
+    imposter_user_data = df[df["ID"] != subject].sample(genuine_user_data.shape[0], random_state=1)
     imposter_user_data = copy.deepcopy(imposter_user_data.values)
     imposter_user_data[:, 0] = 0
 
@@ -37,7 +37,7 @@ def binary_classify(subject: int, save: bool = False) -> list:
     y = dataset.iloc[:, 0] # id
 
     # TODO: Configurable train/test size?
-    return train_test_split(X, y, train_size=0.7)
+    return train_test_split(X, y, train_size=0.7, random_state=1)
 
 def preprocess_raw_subject(subject: int) -> pd.DataFrame:
     # TODO: Check if file exists?
@@ -127,7 +127,7 @@ def multiprocess_all_subjects():
     subjects = 15
     print(f"Processing the feature set for {subjects} subjects.")
     start = time.time()
-    with multiprocessing.Pool(processes=16) as pool:
+    with multiprocessing.Pool(processes=subjects) as pool:
         tuple(tqdm(pool.imap_unordered(process_subject, range(subjects)), total=subjects))
     print(f"Took {time.time() - start:3.3f}s")
 
