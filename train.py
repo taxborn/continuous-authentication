@@ -1,11 +1,9 @@
-import time
 import config
 import pathlib
 import preprocess
 import validation
 from tqdm import tqdm
-from collections import defaultdict
-from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor # type: ignore
 
 if __name__ == "__main__":
     if not pathlib.Path(config.FEATURE_FILE).exists():
@@ -26,12 +24,12 @@ if __name__ == "__main__":
     regressor.fit(X_train, y_train)
     y_pred = regressor.predict(X_test)
 
+    # We start with a trust score of 100
     C = 100
-    threshold = 50
     violations = 0
 
     for pred in tqdm(y_pred, unit=" Predictions", desc="Calculating trust score"):
-        if C < threshold: violations += 1
+        violations += C < config.THRESHOLD
 
         if pred >= 0.5: C = min(C + pred, 100)
         elif pred >= 0.3: C = max(C - (1 - pred), 0)
