@@ -43,17 +43,28 @@ def preprocess_raw_subject(subject: int) -> pd.DataFrame:
     # TODO: Check if file exists?
     df = pd.read_csv(f"{config.RAW_DATA_FOLDER}/user_{subject}_data.csv")
     # Since this is used a lot, compute once
-    dt = df.Timestamp - df.Timestamp.shift(1)
+    dt = df["Timestamp"].diff()
 
-    df = df.assign(X_Speed=lambda row: (row.X - row.X.shift(1)) / dt)
-    df = df.assign(Y_Speed=lambda row: (row.Y - row.Y.shift(1)) / dt)
-    df = df.assign(Speed=lambda row: np.sqrt((row.X_Speed ** 2) + (row.Y_Speed ** 2)))
-    df = df.assign(X_Acceleration=lambda row: (row.X_Speed - row.X_Speed.shift(1)) / dt)
-    df = df.assign(Y_Acceleration=lambda row: (row.Y_Speed - row.Y_Speed.shift(1)) / dt)
-    df = df.assign(Acceleration=lambda row: (row.Speed - row.Speed.shift(1)) / dt)
-    df = df.assign(Jerk=lambda row: (row.Acceleration - row.Acceleration.shift(1)) / dt)
+    df["X_Speed"] = df["X"].diff() / dt
+    df["Y_Speed"] = df["Y"].diff() / dt
+    df["Speed"] = np.sqrt(df["X_Speed"]**2 + df["Y_Speed"]**2)
+    df["X_Acceleration"] = df["X_Speed"].diff() / dt
+    df["Y_Acceleration"] = df["Y_Speed"].diff() / dt
+    df["Acceleration"] = df["Speed"].diff() / dt
+    df["Jerk"] = df["Acceleration"].diff() / dt
 
+    # Since really the only NaNs we see are the the first few rows of speed, acceleration, and jerk, due to them not having
+    # info, it seems reasonable to start this off at 0
     return df.fillna(0)
+
+def calculate_statistics(data: dict, array: np.ndarray, feature_name: str, col_idx: int):
+    """
+    Calculate mean, std, min, and max for the specified feature and append to the data dictionary.
+    """
+    data[f'Mean_{feature_name}'].append(array[:, col_idx].mean())
+    data[f'Std_{feature_name}'].append(array[:, col_idx].std())
+    data[f'Min_{feature_name}'].append(array[:, col_idx].min())
+    data[f'Max_{feature_name}'].append(array[:, col_idx].max())
 
 def process_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -71,7 +82,7 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     data = defaultdict(list)
     window = deque(maxlen=config.SEQUENCE_LENGTH)
-    subject = df.iloc[1]['ID']
+    subject = int(df.iloc[1]['ID'])
 
     for i, row in enumerate(df.values):
         window.append(row)
@@ -80,15 +91,13 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         if i == 0: print(f"{row}")
         cpy = np.copy(window)
 
-        data['Mean_X_Speed'].append(cpy[:, 6].mean())
-        data['Std_X_Speed'].append(cpy[:, 6].std())
-        data['Min_X_Speed'].append(cpy[:, 6].min())
-        data['Max_X_Speed'].append(cpy[:, 6].max())
-
-        data['Mean_Y_Speed'].append(cpy[:, 6].mean())
-        data['Std_Y_Speed'].append(cpy[:, 6].std())
-        data['Min_Y_Speed'].append(cpy[:, 6].min())
-        data['Max_Y_Speed'].append(cpy[:, 6].max())
+        calculate_statistics(data, cpy, "X_Speed", 6)
+        calculate_statistics(data, cpy, "Y_Speed", 7)
+        calculate_statistics(data, cpy, "Speed", 8)
+        calculate_statistics(data, cpy, "X_Acceleration", 9)
+        calculate_statistics(data, cpy, "Y_Acceleration", 10)
+        calculate_statistics(data, cpy, "Acceleration", 11)
+        calculate_statistics(data, cpy, "Jerk", 12)
 
     out = pd.DataFrame.from_dict(data)
     # TODO: Figure out a different way to do this, similar to how we compute features
@@ -137,8 +146,3 @@ def create_feature_file():
                     outfile.write(b'\n')
                 shutil.copyfileobj(infile, outfile)
     print(f"took {time.time() - start:.3f}s")
-
-
-if __name__ == "__main__":
-    multiprocess_all_subjects()
-    create_feature_file()
