@@ -11,7 +11,7 @@ if __name__ == "__main__":
         preprocess.multiprocess_all_subjects()
         preprocess.create_feature_file()
 
-    X_train, X_test, y_train, y_test = preprocess.binary_classify(0)
+    X_train, X_test, y_train, y_test = preprocess.binary_classify(subject=0)
 
     classifier = KNeighborsClassifier(metric="cityblock", n_jobs=-1, n_neighbors=3)
     classifier.fit(X_train, y_train)
