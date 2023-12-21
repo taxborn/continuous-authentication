@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import multiprocessing
-from sklearn.model_selection import train_test_split # type: ignore
+from sklearn.model_selection import train_test_split  # type: ignore
 from collections import deque, defaultdict
+
 
 def binary_classify(subject: int, save: bool = False) -> list:
     # TODO: Check if FEATURE_FILE exists?
@@ -24,21 +25,29 @@ def binary_classify(subject: int, save: bool = False) -> list:
     genuine_data = copy.deepcopy(genuine_user_data.values)
     genuine_data[:, 0] = 1
 
-    imposter_user_data = df[df["ID"] != subject].sample(genuine_data.shape[0], random_state=1)
+    imposter_user_data = df[df["ID"] != subject].sample(
+        genuine_data.shape[0], random_state=1
+    )
     imposter_data = copy.deepcopy(imposter_user_data.values)
     imposter_data[:, 0] = 0
 
-    dataset = pd.concat([pd.DataFrame(genuine_data, columns=df.columns), pd.DataFrame(imposter_data, columns=df.columns)])
+    dataset = pd.concat(
+        [
+            pd.DataFrame(genuine_data, columns=df.columns),
+            pd.DataFrame(imposter_data, columns=df.columns),
+        ]
+    )
     dataset.replace([-np.inf, np.inf], 0, inplace=True)
-    dataset["ID"] = dataset["ID"].astype('int')
+    dataset["ID"] = dataset["ID"].astype("int")
     if save:
         dataset.to_csv(f"data/proc/binuser_{subject}_data.csv", index=False)
 
-    X = dataset.iloc[:, 1:] # features
-    y = dataset.iloc[:, 0] # id
+    X = dataset.iloc[:, 1:]  # features
+    y = dataset.iloc[:, 0]  # id
 
     # TODO: Configurable train/test size?
     return train_test_split(X, y, train_size=0.9, random_state=1)
+
 
 def preprocess_raw_subject(subject: int) -> pd.DataFrame:
     # TODO: Check if file exists?
@@ -48,7 +57,7 @@ def preprocess_raw_subject(subject: int) -> pd.DataFrame:
 
     df["X_Speed"] = df["X"].diff() / dt
     df["Y_Speed"] = df["Y"].diff() / dt
-    df["Speed"] = np.sqrt(df["X_Speed"]**2 + df["Y_Speed"]**2)
+    df["Speed"] = np.sqrt(df["X_Speed"] ** 2 + df["Y_Speed"] ** 2)
     df["X_Acceleration"] = df["X_Speed"].diff() / dt
     df["Y_Acceleration"] = df["Y_Speed"].diff() / dt
     df["Acceleration"] = df["Speed"].diff() / dt
@@ -58,14 +67,18 @@ def preprocess_raw_subject(subject: int) -> pd.DataFrame:
     # info, it seems reasonable to start this off at 0
     return df.fillna(0)
 
-def calculate_statistics(data: dict[str, list], array: np.ndarray, feature_name: str, col_idx: int):
+
+def calculate_statistics(
+    data: dict[str, list], array: np.ndarray, feature_name: str, col_idx: int
+):
     """
     Calculate mean, std, min, and max for the specified feature and append to the data dictionary.
     """
-    data[f'Mean_{feature_name}'].append(array[:, col_idx].mean())
-    data[f'Std_{feature_name}'].append(array[:, col_idx].std())
-    data[f'Min_{feature_name}'].append(array[:, col_idx].min())
-    data[f'Max_{feature_name}'].append(array[:, col_idx].max())
+    data[f"Mean_{feature_name}"].append(array[:, col_idx].mean())
+    data[f"Std_{feature_name}"].append(array[:, col_idx].std())
+    data[f"Min_{feature_name}"].append(array[:, col_idx].min())
+    data[f"Max_{feature_name}"].append(array[:, col_idx].max())
+
 
 def process_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -83,7 +96,7 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     data: dict[str, list] = defaultdict(list)
     window: deque[list] = deque(maxlen=config.SEQUENCE_LENGTH)
-    subject = int(df.iloc[1]['ID'])
+    subject = int(df.iloc[1]["ID"])
 
     for row in df.values:
         window.append(row)
@@ -104,14 +117,16 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     out.insert(0, "ID", subject)
     return out
 
+
 def process_subject(subject: int):
     """
-    Process a specific subject. This will also save the resulting DataFrame to a CSV 
+    Process a specific subject. This will also save the resulting DataFrame to a CSV
     """
     df = preprocess_raw_subject(subject)
     df = process_features(df)
     # TODO: What to do if the file exists? overwrite? ask? increment a value in the name?
     df.to_csv(f"data/proc/user_{subject}_data.csv", index=False)
+
 
 def multiprocess_all_subjects():
     """
@@ -126,7 +141,15 @@ def multiprocess_all_subjects():
     """
     subjects = 15
     with multiprocessing.Pool(processes=subjects) as pool:
-        tuple(tqdm(pool.imap_unordered(process_subject, range(subjects)), total=subjects, unit=" subjects", desc="Processing the feature sets"))
+        tuple(
+            tqdm(
+                pool.imap_unordered(process_subject, range(subjects)),
+                total=subjects,
+                unit=" subjects",
+                desc="Processing the feature sets",
+            )
+        )
+
 
 def create_feature_file():
     # TODO: What to do if the file exists? overwrite? ask? increment a value in the name?
@@ -134,12 +157,12 @@ def create_feature_file():
 
     print("Copying individual user feature files to master data file...", end=" ")
     start = time.time()
-    with open(config.FEATURE_FILE, 'wb') as outfile:
+    with open(config.FEATURE_FILE, "wb") as outfile:
         for i, subject in enumerate(subject_data):
-            with open(subject, 'rb') as infile:
+            with open(subject, "rb") as infile:
                 if i != 0:
                     infile.readline()
                 if i > 1:
-                    outfile.write(b'\n')
+                    outfile.write(b"\n")
                 shutil.copyfileobj(infile, outfile)
     print(f"took {time.time() - start:.3f}s")
