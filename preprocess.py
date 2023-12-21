@@ -102,7 +102,7 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         window.append(row)
         if len(window) != config.SEQUENCE_LENGTH:
             continue
-        cpy = np.array(window)
+        cpy = np.copy(window)
 
         # Some statistics surrounding velocity, acceleration, and jerk
         stats = {
@@ -118,10 +118,10 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         for stat, column in stats.items():
             calculate_statistics(data, cpy, stat, column)
 
-    out = pd.DataFrame.from_dict(data)
-    # TODO: Figure out a different way to do this, similar to how we compute features
-    out.insert(0, "ID", subject)
-    return out
+    df = pd.DataFrame.from_dict(data)
+    # reinsert the subject's ID back into the dataframe
+    df.insert(0, "ID", subject)
+    return df
 
 
 def process_subject(subject: int):
