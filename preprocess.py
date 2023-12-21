@@ -102,15 +102,21 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         window.append(row)
         if len(window) != config.SEQUENCE_LENGTH:
             continue
-        cpy = np.copy(window)
+        cpy = np.array(window)
 
-        calculate_statistics(data, cpy, "X_Speed", 6)
-        calculate_statistics(data, cpy, "Y_Speed", 7)
-        calculate_statistics(data, cpy, "Speed", 8)
-        calculate_statistics(data, cpy, "X_Acceleration", 9)
-        calculate_statistics(data, cpy, "Y_Acceleration", 10)
-        calculate_statistics(data, cpy, "Acceleration", 11)
-        calculate_statistics(data, cpy, "Jerk", 12)
+        # Some statistics surrounding velocity, acceleration, and jerk
+        stats = {
+            "X_Speed": 6,
+            "Y_Speed": 7,
+            "Speed": 8,
+            "X_Acceleration": 9,
+            "Y_Acceleration": 10,
+            "Acceleration": 11,
+            "Jerk": 12,
+        }
+
+        for stat, column in stats.items():
+            calculate_statistics(data, cpy, stat, column)
 
     out = pd.DataFrame.from_dict(data)
     # TODO: Figure out a different way to do this, similar to how we compute features
