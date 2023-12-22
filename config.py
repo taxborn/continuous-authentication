@@ -5,4 +5,5 @@ RAW_DATA_FOLDER = "data/raw"
 FEATURE_FILE = f"data/proc/features_SQ{SEQUENCE_LENGTH}.csv"
 
 # Trust score (scale from 0-100)
+STARTING_VALUE = 100
 THRESHOLD = 70

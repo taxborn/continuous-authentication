@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split  # type: ignore
 from collections import deque, defaultdict
 
 
-def binary_classify(subject: int, save: bool = False) -> list:
+def binary_classify(subject: int, save: bool = False, shuffle: bool = True) -> list:
     # TODO: Check if FEATURE_FILE exists?
     df = pd.read_csv(config.FEATURE_FILE)
 
@@ -25,9 +25,7 @@ def binary_classify(subject: int, save: bool = False) -> list:
     genuine_data = copy.deepcopy(genuine_user_data.values)
     genuine_data[:, 0] = 1
 
-    imposter_user_data = df[df["ID"] != subject].sample(
-        genuine_data.shape[0], random_state=1
-    )
+    imposter_user_data = df[df["ID"] != subject].sample(genuine_data.shape[0])
     imposter_data = copy.deepcopy(imposter_user_data.values)
     imposter_data[:, 0] = 0
 
@@ -46,7 +44,7 @@ def binary_classify(subject: int, save: bool = False) -> list:
     y = dataset.iloc[:, 0]  # id
 
     # TODO: Configurable train/test size?
-    return train_test_split(X, y, train_size=0.9, random_state=1)
+    return train_test_split(X, y, train_size=0.9, shuffle=shuffle)
 
 
 def preprocess_raw_subject(subject: int) -> pd.DataFrame:
@@ -69,15 +67,17 @@ def preprocess_raw_subject(subject: int) -> pd.DataFrame:
 
 
 def calculate_statistics(
-    data: dict[str, list], array: np.ndarray, feature_name: str, col_idx: int
+    data: dict[str, list], array: np.ndarray, feature_name: str, column_index: int
 ):
     """
     Calculate mean, std, min, and max for the specified feature and append to the data dictionary.
     """
-    data[f"Mean_{feature_name}"].append(array[:, col_idx].mean())
-    data[f"Std_{feature_name}"].append(array[:, col_idx].std())
-    data[f"Min_{feature_name}"].append(array[:, col_idx].min())
-    data[f"Max_{feature_name}"].append(array[:, col_idx].max())
+    slice = array[:, column_index]
+
+    data[f"Mean_{feature_name}"].append(slice.mean())
+    data[f"Std_{feature_name}"].append(slice.std())
+    data[f"Min_{feature_name}"].append(slice.min())
+    data[f"Max_{feature_name}"].append(slice.max())
 
 
 def process_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -94,15 +94,14 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     5: Duration
     6-12: Set in preprocess_raw_subject()
     """
-    data: dict[str, list] = defaultdict(list)
-    window: deque[list] = deque(maxlen=config.SEQUENCE_LENGTH)
-    subject = int(df.iloc[1]["ID"])
+    data_dictionary: dict[str, list] = defaultdict(list)
+    rolling_window: deque[list] = deque(maxlen=config.SEQUENCE_LENGTH)
 
-    for row in df.values:
-        window.append(row)
-        if len(window) != config.SEQUENCE_LENGTH:
+    for raw_row in df.values:
+        rolling_window.append(raw_row)
+        if len(rolling_window) != config.SEQUENCE_LENGTH:
             continue
-        cpy = np.copy(window)
+        row = np.copy(rolling_window)
 
         # Some statistics surrounding velocity, acceleration, and jerk
         stats = {
@@ -116,12 +115,12 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         }
 
         for stat, column in stats.items():
-            calculate_statistics(data, cpy, stat, column)
+            calculate_statistics(data_dictionary, row, stat, column)
 
-    df = pd.DataFrame.from_dict(data)
-    # reinsert the subject's ID back into the dataframe
-    df.insert(0, "ID", subject)
-    return df
+    out = pd.DataFrame.from_dict(data_dictionary)
+    # Re-insert the subject's ID back into the dataframe
+    out.insert(0, "ID", df.iloc[1]["ID"].astype("int"))
+    return out
 
 
 def process_subject(subject: int):
@@ -143,7 +142,7 @@ def multiprocess_all_subjects():
     To have a pretty iterator with multiprocessing, we need to lazily evaluate the function we want to map over.
     To actually execute the operations out of their lazy state, we wrap everything in tuple().
 
-    TODO: Is tuple() the only way to evaluate?
+    TODO: Is tuple() the best way to evaluate?
     """
     subjects = 15
     with multiprocessing.Pool(processes=subjects) as pool:

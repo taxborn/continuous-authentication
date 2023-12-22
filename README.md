@@ -16,4 +16,5 @@ All you need to run the models is to ensure you have the requirements installed 
 - Create a script for data collection
     - Compute features ***continuously***.
     - Run against the model ***continuously***.
-- Experiment with different trust scores
+- Experiment with different trust score equations
+- Create visualizations, Jupyter Notebook?
