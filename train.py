@@ -1,3 +1,4 @@
+import time
 import config
 import pathlib
 import preprocess
@@ -8,7 +9,10 @@ if __name__ == "__main__":
     if not pathlib.Path(config.FEATURE_FILE).exists():
         print(f"{config.FEATURE_FILE} does not exist, computing features.")
         preprocess.multiprocess_all_subjects()
+        print("Copying individual user feature files to master data file...", end=" ")
+        start = time.time()
         preprocess.create_feature_file()
+        print(f"took {time.time() - start:.3f}s")
 
     X_train, X_test, y_train, y_test = preprocess.binary_classify(subject=0)
 

@@ -160,8 +160,6 @@ def create_feature_file():
     # TODO: What to do if the file exists? overwrite? ask? increment a value in the name?
     subject_data = glob.glob("data/proc/user_*_data.csv")
 
-    print("Copying individual user feature files to master data file...", end=" ")
-    start = time.time()
     with open(config.FEATURE_FILE, "wb") as outfile:
         for i, subject in enumerate(subject_data):
             with open(subject, "rb") as infile:
@@ -170,4 +168,3 @@ def create_feature_file():
                 if i > 1:
                     outfile.write(b"\n")
                 shutil.copyfileobj(infile, outfile)
-    print(f"took {time.time() - start:.3f}s")
