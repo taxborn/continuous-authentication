@@ -2,7 +2,6 @@ import config
 import pathlib
 import preprocess
 import validation
-from tqdm import tqdm
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor  # type: ignore
 
 if __name__ == "__main__":
