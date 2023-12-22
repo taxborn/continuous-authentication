@@ -5,7 +5,6 @@ TODO: If I implement this on more datasets, see if I can generalize, but I think
 per dataset is the way to go
 """
 import copy
-import time
 import glob
 import config
 import shutil
