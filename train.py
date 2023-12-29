@@ -29,4 +29,4 @@ if __name__ == "__main__":
 
     # We start with a trust score of 100
     C, violations = validation.calculate_trust_score(y_pred)
-    print(f"Trust score calculations: {C = } {violations = }")
+    print(f"Trust score calculations: {C = :3.2f} {violations = }")

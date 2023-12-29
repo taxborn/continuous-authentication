@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 def calculate_metric_scores(y_test, y_pred):
     # TODO: I probably want to return these values instead of printing
-    print(f"Accuracy: {100 * accuracy_score(y_test, y_pred):3.4f}%")
-    print(f"Precision: {100 * precision_score(y_test, y_pred):3.4f}%")
-    print(f"Recall: {100 * recall_score(y_test, y_pred):3.4f}%")
-    print(f"F1: {100 * f1_score(y_test, y_pred):3.4f}%")
+    print(f"Accuracy: {100 * accuracy_score(y_test, y_pred):.3f}%")
+    print(f"Precision: {100 * precision_score(y_test, y_pred):.3f}%")
+    print(f"Recall: {100 * recall_score(y_test, y_pred):.3f}%")
+    print(f"F1: {100 * f1_score(y_test, y_pred):.3f}%")
 
 
 def calculate_trust_score(y_pred: list[int]) -> tuple[int, int]:
@@ -16,7 +16,7 @@ def calculate_trust_score(y_pred: list[int]) -> tuple[int, int]:
     # TODO: This isn't needed, once a violation occurs we re-authenticate and
     violations = 0
 
-    for pred in tqdm(y_pred, unit=" Predictions", desc="Calculating trust score"):
+    for pred in tqdm(y_pred, unit="prediction", desc="Calculating trust score"):
         violations += C < config.THRESHOLD
 
         if pred >= 0.5:

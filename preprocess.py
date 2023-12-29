@@ -24,7 +24,9 @@ def binary_classify(subject: int, save: bool = False, shuffle: bool = True) -> l
     genuine_data = copy.deepcopy(genuine_user_data.values)
     genuine_data[:, 0] = 1
 
-    imposter_user_data = df[df["ID"] != subject].sample(genuine_data.shape[0])
+    imposter_user_data = df[df["ID"] != subject].sample(
+        genuine_data.shape[0], random_state=config.RANDOM_STATE
+    )
     imposter_data = copy.deepcopy(imposter_user_data.values)
     imposter_data[:, 0] = 0
 
@@ -43,7 +45,9 @@ def binary_classify(subject: int, save: bool = False, shuffle: bool = True) -> l
     y = dataset.iloc[:, 0]  # id
 
     # TODO: Configurable train/test size?
-    return train_test_split(X, y, train_size=0.9, shuffle=shuffle)
+    return train_test_split(
+        X, y, train_size=0.9, shuffle=shuffle, random_state=config.RANDOM_STATE
+    )
 
 
 def preprocess_raw_subject(subject: int) -> pd.DataFrame:
@@ -66,17 +70,19 @@ def preprocess_raw_subject(subject: int) -> pd.DataFrame:
 
 
 def calculate_statistics(
-    data: dict[str, list], array: np.ndarray, feature_name: str, column_index: int
+    data: dict[str, list], array: np.ndarray, stats: dict[str, int]
 ):
     """
     Calculate mean, std, min, and max for the specified feature and append to the data dictionary.
     """
-    slice = array[:, column_index]
 
-    data[f"Mean_{feature_name}"].append(slice.mean())
-    data[f"Std_{feature_name}"].append(slice.std())
-    data[f"Min_{feature_name}"].append(slice.min())
-    data[f"Max_{feature_name}"].append(slice.max())
+    for stat, column_index in stats.items():
+        slice = array[:, column_index]
+
+        data[f"Mean_{stat}"].append(slice.mean())
+        data[f"Std_{stat}"].append(slice.std())
+        data[f"Min_{stat}"].append(slice.min())
+        data[f"Max_{stat}"].append(slice.max())
 
 
 def process_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -96,6 +102,16 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     data_dictionary: dict[str, list] = defaultdict(list)
     rolling_window: deque[list] = deque(maxlen=config.SEQUENCE_LENGTH)
 
+    stats = {
+        "X_Speed": 6,
+        "Y_Speed": 7,
+        "Speed": 8,
+        "X_Acceleration": 9,
+        "Y_Acceleration": 10,
+        "Acceleration": 11,
+        "Jerk": 12,
+    }
+
     for raw_row in df.values:
         rolling_window.append(raw_row)
         if len(rolling_window) != config.SEQUENCE_LENGTH:
@@ -103,18 +119,7 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
         row = np.copy(rolling_window)
 
         # Some statistics surrounding velocity, acceleration, and jerk
-        stats = {
-            "X_Speed": 6,
-            "Y_Speed": 7,
-            "Speed": 8,
-            "X_Acceleration": 9,
-            "Y_Acceleration": 10,
-            "Acceleration": 11,
-            "Jerk": 12,
-        }
-
-        for stat, column in stats.items():
-            calculate_statistics(data_dictionary, row, stat, column)
+        calculate_statistics(data_dictionary, row, stats)
 
     out = pd.DataFrame.from_dict(data_dictionary)
     # Re-insert the subject's ID back into the dataframe
@@ -149,7 +154,7 @@ def multiprocess_all_subjects():
             tqdm(
                 pool.imap_unordered(process_subject, range(subjects)),
                 total=subjects,
-                unit=" subjects",
+                unit="subject",
                 desc="Processing the feature sets",
             )
         )
